@@ -13,7 +13,7 @@
 
 #include <igl/get_seconds.h>
 #include <igl/writeDMAT.h>
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <igl/readMESH.h>
 #include <igl/unproject_onto_mesh.h>
 
@@ -31,7 +31,7 @@ using namespace ParticleSystem; //For Force Spring
 
 //typedef physical entities I need
 
-typedef PhysicalSystemFEM<double, NeohookeanTet> NeohookeanTets;
+typedef PhysicalSystemFEM<double, StvkTet> NeohookeanTets;
 
 typedef World<double,
                         std::tuple<PhysicalSystemParticleSingle<double> *, NeohookeanTets *>,
@@ -77,10 +77,10 @@ Eigen::MatrixXd createEmbeddedMesh(Eigen::MatrixXd EmbeddingV, NeohookeanTets *t
 
         for(auto element: tets->getImpl().getElements())
         {
-            int i0 = (element->EnergyKineticNonLumped::m_qDofs)[0]->getLocalId();
-            int i1 = (element->EnergyKineticNonLumped::m_qDofs)[1]->getLocalId();
-            int i2 = (element->EnergyKineticNonLumped::m_qDofs)[2]->getLocalId();
-            int i3 = (element->EnergyKineticNonLumped::m_qDofs)[3]->getLocalId();
+            int i0 = (element->EnergyKineticNonLumped::getQDofs())[0]->getLocalId();
+            int i1 = (element->EnergyKineticNonLumped::getQDofs())[1]->getLocalId();
+            int i2 = (element->EnergyKineticNonLumped::getQDofs())[2]->getLocalId();
+            int i3 = (element->EnergyKineticNonLumped::getQDofs())[3]->getLocalId();
 
             double ro_array[3];
             Eigen::RowVectorXd::Map(ro_array, EmbeddingV.row(i).cols()) = EmbeddingV.row(i);
@@ -120,7 +120,7 @@ Eigen::MatrixXd createEmbeddedMesh(Eigen::MatrixXd EmbeddingV, NeohookeanTets *t
                 // std::cout<<"i1 "<<i1<<std::endl;
                 Nc(3*i,   i1 )   += phi1;
                 Nc(3*i+1, i1+1 ) += phi1;
-                Nc(3*i+2, i1+2 ) += phi1; 
+                Nc(3*i+2, i1+2 ) += phi1;
                 reachedThisShapeFunction(i1) = phi1;
             }
 
@@ -128,7 +128,7 @@ Eigen::MatrixXd createEmbeddedMesh(Eigen::MatrixXd EmbeddingV, NeohookeanTets *t
                 // std::cout<<"i2 "<<i2<<std::endl;
                 Nc(3*i,   i2 )   += phi2;
                 Nc(3*i+1, i2+1 ) += phi2;
-                Nc(3*i+2, i2+2 ) += phi2; 
+                Nc(3*i+2, i2+2 ) += phi2;
                 reachedThisShapeFunction(i2) = phi2;
             }
 
@@ -136,12 +136,12 @@ Eigen::MatrixXd createEmbeddedMesh(Eigen::MatrixXd EmbeddingV, NeohookeanTets *t
                 // std::cout<<"i3 "<<i3<<std::endl;
                 Nc(3*i,   i3 )   += phi3;
                 Nc(3*i+1, i3+1 ) += phi3;
-                Nc(3*i+2, i3+2 ) += phi3;  
+                Nc(3*i+2, i3+2 ) += phi3;
                 reachedThisShapeFunction(i3) = phi3;
-            } 
-        } 
+            }
+        }
         // std::cout<<"---------------------"<<std::endl;
-        // std::cout<<std::endl;    
+        // std::cout<<std::endl;
     }
 
     // std::cout<<Nc<<std::endl;
@@ -152,7 +152,7 @@ Eigen::MatrixXd createEmbeddedMesh(Eigen::MatrixXd EmbeddingV, NeohookeanTets *t
 Eigen::MatrixXd getCurrentVertPositions(MyWorld &world, NeohookeanTets *tets) {
     // Eigen::Map<Eigen::MatrixXd> q(mapStateEigen<0>(world).data(), V.cols(), V.rows()); // Get displacements only
     auto q = mapDOFEigen(tets->getQ(), world);
-    Eigen::VectorXd q1 = N*q;
+    Eigen::VectorXd q1 = q;
     Eigen::Map<Eigen::MatrixXd> dV(q1.data(), V1.cols(), V1.rows()); // Get displacements only
 
     return V1 + dV.transpose();
@@ -201,13 +201,13 @@ int main(int argc, char **argv) {
     stepper.step(world);
 
     igl::readMESH(argv[2], V1, T1, F1);
-    N = createEmbeddedMesh(V1, tets, world);
+    //N = createEmbeddedMesh(V1, tets, world);
 
 
     /** libigl display stuff **/
-    igl::viewer::Viewer viewer;
+    igl::opengl::glfw::Viewer viewer;
     double tot_time = 0.0;
-    viewer.callback_pre_draw = [&](igl::viewer::Viewer & viewer)
+    viewer.callback_pre_draw = [&](igl::opengl::glfw::Viewer & viewer)
     {
         // predefined colors
         const Eigen::RowVector3d orange(1.0,0.7,0.2);
@@ -219,10 +219,10 @@ int main(int argc, char **argv) {
             auto q_part = mapDOFEigen(pinned_point->getQ(), world);
             Eigen::MatrixXd part_pos = q_part;
 
-            viewer.data.set_points(part_pos.transpose(), orange);
+            viewer.data().set_points(part_pos.transpose(), orange);
         } else {
             Eigen::MatrixXd part_pos;
-            viewer.data.set_points(part_pos, orange);
+            viewer.data().set_points(part_pos, orange);
         }
 
         if(viewer.core.is_animating)
@@ -233,8 +233,8 @@ int main(int argc, char **argv) {
             tot_time += igl::get_seconds() - start;
 
             Eigen::MatrixXd newV = getCurrentVertPositions(world, tets);
-            viewer.data.set_vertices(newV);
-            viewer.data.compute_normals();
+            viewer.data().set_vertices(newV);
+            viewer.data().compute_normals();
 
             current_frame++;
             // std::cout << "Average timestep: " << (tot_time / current_frame) << std::endl;
@@ -242,7 +242,7 @@ int main(int argc, char **argv) {
         return false;
     };
 
-    viewer.callback_key_pressed = [&](igl::viewer::Viewer &, unsigned int key, int mod)
+    viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer &, unsigned int key, int mod)
     {
         switch(key)
         {
@@ -264,7 +264,7 @@ int main(int argc, char **argv) {
         return true;
     };
 
-    viewer.callback_mouse_down = [&](igl::viewer::Viewer&, int, int)->bool
+    viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer&, int, int)->bool
     {
         Eigen::MatrixXd curV = getCurrentVertPositions(world, tets);
         last_mouse = Eigen::RowVector3f(viewer.current_mouse_x,viewer.core.viewport(3)-viewer.current_mouse_y,0);
@@ -301,7 +301,7 @@ int main(int argc, char **argv) {
         return false; // TODO false vs true??
     };
 
-    viewer.callback_mouse_up = [&](igl::viewer::Viewer&, int, int)->bool
+    viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer&, int, int)->bool
     {
         is_dragging = false;
         forceSpring->getImpl().setStiffness(0.0);
@@ -311,7 +311,7 @@ int main(int argc, char **argv) {
         return false;
     };
 
-    viewer.callback_mouse_move = [&](igl::viewer::Viewer &, int,int)->bool
+    viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer &, int,int)->bool
     {
         if(is_dragging) {
             Eigen::RowVector3f drag_mouse(
@@ -347,11 +347,11 @@ int main(int argc, char **argv) {
         return false;
     };
 
-    viewer.data.set_mesh(V1,F1);
-    viewer.core.show_lines = true;
-    viewer.core.invert_normals = true;
+    viewer.data().set_mesh(V1,F1);
+    viewer.data().show_lines = true;
+    viewer.data().invert_normals = true;
     viewer.core.is_animating = false;
-    viewer.data.face_based = true;
+    viewer.data().face_based = true;
 
     viewer.launch();
     return EXIT_SUCCESS;

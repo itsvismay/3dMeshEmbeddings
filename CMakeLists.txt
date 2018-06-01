@@ -14,13 +14,13 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 
 #Gauss
-set(LIBIGL_INCLUDE_PATH "/home/vismay/libigl/include") # Weird that I have to do this for GAUSS seperately
+set(LIBIGL_INCLUDE_PATH "/home/vismay/recode/libigl/include") # Weird that I have to do this for GAUSS seperately
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
-set(Gauss_ROOT_DIR "/home/vismay/GAUSS/")
+set(Gauss_ROOT_DIR "/home/vismay/recode/GAUSS/")
 find_package(GAUSS REQUIRED)
 
 #Libigl
-set(LIBIGL_INCLUDE_DIR "/home/vismay/libigl/include")
+set(LIBIGL_INCLUDE_DIR "/home/vismay/recode/libigl/include")
 option(LIBIGL_USE_STATIC_LIBRARY "Use libigl as static library" OFF)
 option(LIBIGL_WITH_ANTTWEAKBAR      "Use AntTweakBar"    OFF)
 option(LIBIGL_WITH_CGAL             "Use CGAL"           OFF)
@@ -31,7 +31,7 @@ option(LIBIGL_WITH_LIM              "Use LIM"            OFF)
 option(LIBIGL_WITH_MATLAB           "Use Matlab"         OFF)
 option(LIBIGL_WITH_MOSEK            "Use MOSEK"          OFF)
 option(LIBIGL_WITH_NANOGUI          "Use Nanogui menu"   OFF)
-option(LIBIGL_WITH_OPENGL           "Use OpenGL"         ON)
+option(LIBIGL_WITH_OPENGL           "Use OpenGL"         OFF)
 option(LIBIGL_WITH_OPENGL_GLFW      "Use GLFW"           ON)
 option(LIBIGL_WITH_PNG              "Use PNG"            OFF)
 option(LIBIGL_WITH_PYTHON           "Use Python"         OFF)
@@ -55,4 +55,4 @@ include_directories(${Gauss_INCLUDE_DIRS})
 #Example codes
 link_directories(${Gauss_LIB_DIR_RELEASE})
 add_executable(Embedding ${Embedding_SOURCE_DIR}/src/exampleK.cpp)
-target_link_libraries(Embedding ${Gauss_LIBS} ${UI_LIBS} -lglfw -lpthread igl::core igl::viewer)
+target_link_libraries(Embedding ${Gauss_LIBS} ${UI_LIBS} -lpthread igl::core igl::opengl igl::opengl_glfw)
